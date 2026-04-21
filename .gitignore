@@ -1,0 +1,13 @@
+# Ignore everything
+*
+
+# Do not ignore directories (needed to find files inside folders)
+!*/
+
+# Exceptions: Allow specific file types
+!*.py
+!*.sh
+!*.slurm
+
+# Allow the .gitignore file itself
+!.gitignore
