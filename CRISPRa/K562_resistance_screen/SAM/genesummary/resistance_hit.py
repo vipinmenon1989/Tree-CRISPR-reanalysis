@@ -1,0 +1,59 @@
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+import argparse
+import sys
+
+def main():
+    parser = argparse.ArgumentParser(description='CRISPRa Phase 1: Tunable Resistance Discovery')
+    parser.add_argument('--dmso', required=True, help='Path to DMSO gene_summary.txt')
+    parser.add_argument('--rig', required=True, help='Path to RIG gene_summary.txt')
+    parser.add_argument('--out', default='Resistance_Hits.txt', help='Output filename')
+    parser.add_argument('--gi', type=float, default=0.5, help='GI Residual threshold (default: 0.5)')
+    args = parser.parse_args()
+
+    # 1. Load Data
+    try:
+        df_dmso = pd.read_csv(args.dmso, sep='\t')
+        df_rig = pd.read_csv(args.rig, sep='\t')
+    except Exception as e:
+        print(f"Error loading files: {e}")
+        sys.exit(1)
+
+    # 2. Extract and Rename
+    df_dmso = df_dmso[['id', 'pos|lfc']].rename(columns={'pos|lfc': 'LFC_DMSO', 'id': 'Gene'})
+    df_rig = df_rig[['id', 'pos|lfc', 'pos|p-value', 'pos|goodsgrna']].rename(
+        columns={'pos|lfc': 'LFC_RIG', 'pos|p-value': 'P_Value_RIG', 'pos|goodsgrna': 'Good_Guides_RIG', 'id': 'Gene'}
+    )
+    
+    df = pd.merge(df_dmso, df_rig, on='Gene')
+
+    # 3. Global Linear Regression
+    X = df[['LFC_DMSO']].values
+    y = df['LFC_RIG'].values
+    reg = LinearRegression().fit(X, y)
+    
+    df['GI_Residual'] = df['LFC_RIG'] - reg.predict(X)
+
+    # 4. Apply Tunable Filters
+    hits = df[
+        (df['P_Value_RIG'] <= 0.05) & 
+        (df['GI_Residual'] > args.gi) & 
+        (df['Good_Guides_RIG'] >= 3)
+    ].copy()
+
+    # 5. Output
+    output_cols = ['Gene', 'GI_Residual', 'P_Value_RIG', 'Good_Guides_RIG']
+    hits = hits[output_cols].sort_values(by='GI_Residual', ascending=False)
+    hits.to_csv(args.out, sep='\t', index=False)
+
+    print("-" * 40)
+    print(f"PHASE 1 COMPLETE (Threshold GI > {args.gi})")
+    print(f"Initial Genome Size: {len(df)}")
+    print(f"Functional Hits Found: {len(hits)}")
+    print(f"Results saved to: {args.out}")
+    print("-" * 40)
+
+if __name__ == "__main__":
+    main()
+
