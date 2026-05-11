@@ -16,8 +16,6 @@ def build_traceable_matrix(input_folder, output_file):
     dataframes = []
 
     for file_path in csv_files:
-        # 1. EXACT TRACKING: Extract the exact filename without the .csv extension
-        # If the file is "ALKE_replicate_1.csv", the column will be "ALKE_replicate_1"
         raw_filename = os.path.basename(file_path)
         editor_column_name = raw_filename.replace('.csv', '')
         
@@ -27,19 +25,23 @@ def build_traceable_matrix(input_folder, output_file):
             print(f"Error reading {raw_filename}: {e}")
             continue
             
-        # 2. Strict column verification
-        if 'gene' not in df.columns or 'Sigmoid_Score' not in df.columns:
-            print(f"WARNING: Skipping {raw_filename} - Missing 'gene' or 'Sigmoid_Score'.")
+        # 1. Normalize column names to lowercase for robust matching
+        # This fixes the 'gene' vs 'Gene' issue
+        df.columns = [c.lower() for c in df.columns]
+            
+        # 2. Strict column verification (now using lowercase names)
+        if 'gene' not in df.columns or 'sigmoid_score' not in df.columns:
+            print(f"WARNING: Skipping {raw_filename} - Missing 'gene' or 'Sigmoid_Score' (Case-insensitive).")
             continue
             
         # 3. Collapse multiple guides into a single gene-level Mean score
-        df_mean = df.groupby('gene', as_index=False)['Sigmoid_Score'].mean()
+        df_mean = df.groupby('gene', as_index=False)['sigmoid_score'].mean()
         
         # 4. RENAME THE COLUMN TO THE EXACT FILENAME
-        df_mean = df_mean.rename(columns={'Sigmoid_Score': editor_column_name})
+        df_mean = df_mean.rename(columns={'sigmoid_score': editor_column_name})
         
         dataframes.append(df_mean)
-        print(f"Extracted {len(df_mean)} genes from -> {raw_filename} (Column will be: '{editor_column_name}')")
+        print(f"Extracted {len(df_mean)} genes from -> {raw_filename} (Column: '{editor_column_name}')")
 
     if not dataframes:
         print("CRITICAL ERROR: No valid dataframes to merge.")
@@ -48,7 +50,6 @@ def build_traceable_matrix(input_folder, output_file):
     print("\nExecuting Outer Merge to align all genes...")
     
     # 5. Merge all files together. 
-    # 'outer' ensures genes unique to one editor are kept, filled with NaN for others.
     final_matrix = reduce(lambda left, right: pd.merge(left, right, on='gene', how='outer'), dataframes)
 
     # 6. Save the final matrix

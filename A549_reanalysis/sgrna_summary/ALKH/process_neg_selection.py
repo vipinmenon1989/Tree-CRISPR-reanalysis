@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import sys
 
-def process_mageck_negative_selection(sgrna_file, control_label, b_param=0, n_param=1, ntc_percentile=0.95):
+def process_mageck_negative_selection(sgrna_file, control_label, b_param=1.5, n_param=0.66, ntc_percentile=0.95):
     """
     Processes a standard MAGeCK sgRNA output for a Negative Selection screen.
     """
