@@ -1,0 +1,161 @@
+import pandas as pd
+import numpy as np
+import re
+import time
+from sklearn.model_selection import RandomizedSearchCV, train_test_split, KFold
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import ElasticNet
+from sklearn.metrics import r2_score, mean_squared_error
+from scipy.stats import spearmanr
+import joblib
+
+def main():
+    start_time = time.time()
+    
+    # Paths
+    input_file = "CRISPR_ml_features_final.csv"
+    metrics_file = "baseline_regression_metrics.txt"
+    coef_csv = "baseline_top_sequence_features.csv"
+    model_output_path = "best_baseline_elasticnet_model.pkl"
+    
+    print(f"Loading dataset from: {input_file}...")
+    df = pd.read_csv(input_file)
+    print(f"Loaded dataset with dimensions: {df.shape}")
+    
+    # --- 1. Target Variable ---
+    target_col = 'Sigmoid_Score'
+    if target_col not in df.columns:
+        raise ValueError(f"Error: Target variable '{target_col}' not found in the dataset.")
+        
+    y = df[target_col]
+    
+    # --- 2. Feature Purge (CRITICAL) ---
+    # Drop all epigenetic features (columns containing _bin_)
+    bin_cols = [col for col in df.columns if '_bin_' in col]
+    print(f"Purging {len(bin_cols)} epigenetic columns...")
+    
+    # Drop other specified columns
+    drop_cols = ['distance_to_TSS', 'ID', target_col] + bin_cols
+    existing_drop_cols = [col for col in drop_cols if col in df.columns]
+    
+    X = df.drop(columns=existing_drop_cols)
+    print(f"Final feature matrix X dimensions: {X.shape}")
+    
+    # Train-test split (80/20)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+    print(f"Train set size: {X_train.shape[0]}, Test set size: {X_test.shape[0]}")
+    
+    # --- 3. Data Scaling ---
+    # Identify continuous features (exclude one-hot pos/di and is_K562)
+    one_hot_pattern = re.compile(r"^(pos|di)\d+_")
+    one_hot_cols = [col for col in X.columns if one_hot_pattern.match(col)]
+    continuous_cols = [col for col in X.columns if col not in one_hot_cols and col != 'is_K562']
+    
+    print(f"Scaling {len(continuous_cols)} continuous features...")
+    print(f"Leaving {len(one_hot_cols) + 1} binary/one-hot features unscaled...")
+    
+    scaler = StandardScaler()
+    
+    X_train_cont_scaled = scaler.fit_transform(X_train[continuous_cols])
+    X_test_cont_scaled = scaler.transform(X_test[continuous_cols])
+    
+    X_train_cont_scaled_df = pd.DataFrame(X_train_cont_scaled, columns=continuous_cols, index=X_train.index)
+    X_test_cont_scaled_df = pd.DataFrame(X_test_cont_scaled, columns=continuous_cols, index=X_test.index)
+    
+    # Recombine scaled continuous with unscaled features
+    other_cols = one_hot_cols + ['is_K562'] if 'is_K562' in X.columns else one_hot_cols
+    X_train_scaled = pd.concat([X_train_cont_scaled_df, X_train[other_cols]], axis=1)
+    X_test_scaled = pd.concat([X_test_cont_scaled_df, X_test[other_cols]], axis=1)
+    
+    # Re-order columns to match original
+    X_train_scaled = X_train_scaled[X.columns]
+    X_test_scaled = X_test_scaled[X.columns]
+    
+    # --- 4. Model Setup & RandomizedSearchCV ---
+    base_enet = ElasticNet(max_iter=10000, random_state=42)
+    
+    param_grid = {
+        'l1_ratio': np.linspace(0.1, 1.0, 10),
+        'alpha': np.logspace(-4, 1, 6)
+    }
+    
+    cv_strategy = KFold(n_splits=5, shuffle=True, random_state=42)
+    
+    print("Setting up RandomizedSearchCV...")
+    random_search = RandomizedSearchCV(
+        estimator=base_enet,
+        param_distributions=param_grid,
+        n_iter=30,
+        scoring='neg_mean_squared_error',
+        cv=cv_strategy,
+        verbose=2,
+        random_state=42,
+        n_jobs=-1
+    )
+    
+    print("Starting baseline Elastic Net training...")
+    random_search.fit(X_train_scaled, y_train)
+    
+    print("\nBest Parameters Found:")
+    print(random_search.best_params_)
+    
+    best_model = random_search.best_estimator_
+    
+    # --- 5. Evaluation ---
+    y_pred = best_model.predict(X_test_scaled)
+    
+    r2 = r2_score(y_test, y_pred)
+    mse = mean_squared_error(y_test, y_pred)
+    spearman_corr, spearman_p = spearmanr(y_test, y_pred)
+    
+    print(f"\nTest Set Performance Metrics:")
+    print(f"R2 Score:           {r2:.6f}")
+    print(f"MSE:                {mse:.6f}")
+    print(f"Spearman Corr:      {spearman_corr:.6f} (p={spearman_p:.2e})")
+    
+    # Save the best model
+    print(f"Saving the best model to: {model_output_path}...")
+    joblib.dump(best_model, model_output_path)
+    
+    # Write metrics to a text file
+    print(f"Writing metrics to: {metrics_file}...")
+    with open(metrics_file, 'w') as f:
+        f.write("==================================================\n")
+        f.write("BASELINE ELASTIC NET REGRESSION PERFORMANCE METRICS\n")
+        f.write("==================================================\n")
+        f.write(f"R2 Score:                       {r2:.6f}\n")
+        f.write(f"Mean Squared Error (MSE):       {mse:.6f}\n")
+        f.write(f"Spearman Rank Correlation:      {spearman_corr:.6f}\n")
+        f.write(f"Spearman p-value:               {spearman_p:.2e}\n\n")
+        f.write("==================================================\n")
+        f.write("BEST HYPERPARAMETERS FOUND\n")
+        f.write("==================================================\n")
+        for param, val in random_search.best_params_.items():
+            f.write(f"{param:25}: {val}\n")
+            
+    # --- 6. Coefficient Extraction ---
+    print("Extracting model coefficients...")
+    coefs = best_model.coef_
+    feature_names = X.columns
+    
+    coef_df = pd.DataFrame({
+        'Feature': feature_names,
+        'Coefficient': coefs,
+        'Absolute_Magnitude': np.abs(coefs)
+    })
+    
+    # Filter out features forced to exactly 0.0 by the L1 penalty
+    active_coefs = coef_df[coef_df['Coefficient'] != 0.0]
+    
+    # Sort remaining active features by absolute magnitude and save to CSV
+    sorted_active = active_coefs.sort_values(by='Absolute_Magnitude', ascending=False)
+    print(f"Saving {len(sorted_active)} active features to: {coef_csv}...")
+    sorted_active.to_csv(coef_csv, index=False)
+    
+    elapsed_time = time.time() - start_time
+    print(f"\nExecution finished! Total elapsed time: {elapsed_time/60:.2f} minutes.")
+
+if __name__ == "__main__":
+    main()
