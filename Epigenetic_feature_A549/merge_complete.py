@@ -27,9 +27,9 @@ def merge_crispri_on_id(file_a_path, file_b_path, output_path):
     print(f"Merge complete. Output shape: {merged_df.shape}")
 
 # Execution variables
-file_1 = 'TreeCRISPRi_lib_merged_A549.txt'
+file_1 = 'TreeCRISPRi_lib_merged_A549_scaled.txt'
 file_2 = 'ALKE_hits_new_cuttoff_complete.csv'
-output_file = 'ALKE_hits_complete_A549_Epigenetic_ID_merged.txt'
+output_file = 'ALKE_hits_complete_A549_training_epigenetics_scaled.txt'
 
 if __name__ == "__main__":
     merge_crispri_on_id(file_1, file_2, output_file)

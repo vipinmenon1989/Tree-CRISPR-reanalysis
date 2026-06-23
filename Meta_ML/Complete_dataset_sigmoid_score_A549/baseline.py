@@ -12,10 +12,10 @@ def main():
     # Target definition
     df['class'] = (df['Sigmoid_Score'] > 0.25).astype(int)
 
-    # Feature Selection: Baseline + Guide Epi
-    base = [c for c in df.columns if c in {'distance_to_TSS', 'MFE', 'Tm', 'entropy', 'GC_count', 'GC_content', 'gc_low', 'gc_high'} or c.startswith(('count_', 'pos_', 'di_'))]
-    guide = [c for c in df.columns if c.startswith('guide_')]
-    selected = base + guide
+    # Feature Selection: Baseline only
+    base_exacts = {'distance_to_TSS', 'MFE', 'Tm', 'entropy', 'GC_count', 'GC_content', 'gc_low', 'gc_high'}
+    base_prefixes = ('count_', 'pos_', 'di_')
+    selected = [c for c in df.columns if c in base_exacts or c.startswith(base_prefixes)]
 
     X = df[selected].select_dtypes(include=[np.number])
     y = df['class']
@@ -26,6 +26,8 @@ def main():
     
     # Model Setup
     xgb_clf = xgb.XGBClassifier(scale_pos_weight=ratio, random_state=42, eval_metric='auc')
+    
+    # STRICT ROLLBACK: Exact parameters from the 720-row baseline
     param_grid = {
         'n_estimators': [50, 100], 
         'max_depth': [2, 3], 
@@ -36,6 +38,8 @@ def main():
     }
     
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    
+    # STRICT ROLLBACK: n_iter reverted to 15
     search = RandomizedSearchCV(xgb_clf, param_grid, n_iter=15, scoring='roc_auc', cv=cv, n_jobs=-1, random_state=42)
     search.fit(X_train, y_train)
     
@@ -45,8 +49,8 @@ def main():
     y_prob = best.predict_proba(X_test)[:, 1]
     
     # Export
-    best.save_model(os.path.join(working_dir, "guide_epi_model.json"))
-    with open(os.path.join(working_dir, "guide_epi_metrics.txt"), 'w') as f:
+    best.save_model(os.path.join(working_dir, "baseline_model.json"))
+    with open(os.path.join(working_dir, "baseline_metrics.txt"), 'w') as f:
         f.write(f"ROC-AUC: {roc_auc_score(y_test, y_prob):.4f}\n")
         f.write(f"AUPR: {average_precision_score(y_test, y_prob):.4f}\n")
         f.write(f"Precision: {precision_score(y_test, y_p):.4f}\n")

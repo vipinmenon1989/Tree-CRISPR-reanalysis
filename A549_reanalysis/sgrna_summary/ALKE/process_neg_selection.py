@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import sys
 
-def process_mageck_negative_selection(sgrna_file, control_label, b_param=1.5, n_param=0.66, ntc_percentile=0.95):
+def process_mageck_negative_selection(sgrna_file, control_label, b_param=2.0, n_param=1.0, ntc_percentile=0.95):
     """
     Processes a standard MAGeCK sgRNA output for a Negative Selection screen.
     """
@@ -77,9 +77,9 @@ if __name__ == "__main__":
     # Optional Arguments with Defaults
     parser.add_argument("-c", "--control", default="NO-TARGET", help="Label for NTC guides (default: NO-TARGET)")
     parser.add_argument("-p", "--percentile", type=float, default=0.95, help="NTC percentile for dynamic threshold (default: 0.95)")
-    parser.add_argument("-b", "--b_shift", type=float, default=0, help="Sigmoid center shift (default: 0)")
-    parser.add_argument("-n", "--n_slope", type=float, default=1, help="Sigmoid slope parameter (default: 1)")
-    parser.add_argument("-o", "--output", default="Scored_sgRNA_Matrix.csv", help="Filename for the scored sgRNA matrix")
+    parser.add_argument("-b", "--b_shift", type=float, default=2.0, help="Sigmoid center shift (default: 0)")
+    parser.add_argument("-n", "--n_slope", type=float, default=1.0, help="Sigmoid slope parameter (default: 1)")
+    parser.add_argument("-o", "--output", default="Scored_sgRNA_Matrix_isolated_equation.csv", help="Filename for the scored sgRNA matrix")
     parser.add_argument("-g", "--gene_output", default="Negative_Selection_Hits_RuleOf3.csv", help="Filename for the gene hits file")
 
     args = parser.parse_args()

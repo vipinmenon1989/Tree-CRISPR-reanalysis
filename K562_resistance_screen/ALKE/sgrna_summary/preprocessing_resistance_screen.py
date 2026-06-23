@@ -13,7 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description='CRISPRi Phase 2: File 1 Generation (ReLU Clipping)')
     parser.add_argument('--sgrna_dmso', required=True, help='Path to sgrna_summary.txt (DMSO)')
     parser.add_argument('--sgrna_rig', required=True, help='Path to sgrna_summary.txt (RIG)')
-    parser.add_argument('--out', default='Global_Sigmoid_Scores.txt', help='Output filename')
+    parser.add_argument('--out', default='Global_Sigmoid_Scores_tuned.txt', help='Output filename')
     args = parser.parse_args()
 
     # 1. Load Data

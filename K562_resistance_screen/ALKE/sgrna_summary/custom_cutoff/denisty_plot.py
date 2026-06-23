@@ -61,7 +61,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate density plot for Resistance Delta Score distribution.")
     parser.add_argument("-i", "--input", required=True, help="Path to Hits_plus_NTC_Distribution.csv")
     parser.add_argument("-c", "--control", default="NO-TARGET", help="Label for NTC in the 'Gene' column")
-    parser.add_argument("-o", "--output", default="Resistance_Density_Plot.png", help="Output filename")
+    parser.add_argument("-o", "--output", default="Resistance_Density_Plot_Global_tuned.png", help="Output filename")
 
     args = parser.parse_args()
     plot_resistance_distribution(args.input, args.control, args.output)

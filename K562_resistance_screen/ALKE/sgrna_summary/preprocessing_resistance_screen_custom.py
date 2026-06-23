@@ -3,20 +3,21 @@ import numpy as np
 import argparse
 import sys
 
-def sigmoid(z, b=1.5, n=0.66):
+def sigmoid(z, b=2.0, n=1.0):
     """
     Standardized Sigmoid for Resistance Screens.
-    Midpoint (b) = 1.5 ensures noise suppression (93% NTC exclusion).
-    Slope (n) = 0.66 preserves behavioral gradients for K-Means.
+    Midpoint (b) = 2.0 ensures noise suppression (93% NTC exclusion).
+    Slope (n) = 1.0 preserves behavioral gradients for K-Means.
     """
     # Formula: 1 / (1 + exp(-(Z - b)/n))
-    return 1 / (1 + np.exp(-(z - b) / n))
+    #return 1 / (1 + np.exp(-(z - b)/n))
+    return 1 / (1 + np.exp(-n * z + b))
 
 def main():
     parser = argparse.ArgumentParser(description='CRISPRi Phase 2: sgRNA Standardization')
     parser.add_argument('--sgrna_dmso', required=True, help='Path to sgrna_summary.txt (DMSO)')
     parser.add_argument('--sgrna_rig', required=True, help='Path to sgrna_summary.txt (RIG)')
-    parser.add_argument('--out', default='sgRNA_Standardized_Scores.txt', help='Output filename')
+    parser.add_argument('--out', default='sgRNA_Standardized_Scores_tuned_CRE.txt', help='Output filename')
     args = parser.parse_args()
 
     # 1. Load Data
@@ -65,7 +66,7 @@ def main():
     print("-" * 40)
     print(f"sgRNA SCORES GENERATED")
     print(f"NTC Stats (DMSO): Mean={mu_ntc:.4f}, Std={sigma_ntc:.4f}")
-    print(f"Unified Params: b=1.5, n=0.66")
+    print(f"Unified Params: b=2.0, n=1.0")
     print("-" * 40)
 
 if __name__ == "__main__":

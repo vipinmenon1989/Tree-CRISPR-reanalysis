@@ -11,8 +11,8 @@ def filter_and_extract_sgrnas(input_file, hits_output, dist_output):
         sys.exit(1)
 
     # 2. Identify "Qualified" sgRNAs
-    # Logic: Sigmoid > 0.25 AND Delta > 0.1 
-    qualified_mask = (df['Score_RIG'] > 0.25) & (df['Delta_Score'] > 0.1)
+    # Logic: Sigmoid > 0.25 AND Delta > 0.25 
+    qualified_mask = (df['Score_RIG'] > 0.25) & (df['Delta_Score'] > 0.25)
     df_qualified = df[qualified_mask].copy()
 
     # 3. Apply the Replication Filter (at least 2 qualified sgRNAs per gene)
@@ -47,8 +47,8 @@ def filter_and_extract_sgrnas(input_file, hits_output, dist_output):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='CRISPRi Phase 2: sgRNA-Level Hit Extraction')
     parser.add_argument('-i', '--input', required=True, help='Output from File 1 (sgRNA level)')
-    parser.add_argument('-o_hits', '--out_hits', default='Significant_Resistance_Hits_sgRNA.csv', help='Individual hits')
-    parser.add_argument('-o_dist', '--out_dist', default='Hits_plus_NTC_Distribution.csv', help='Density Plot input')
+    parser.add_argument('-o_hits', '--out_hits', default='Significant_Resistance_Hits_sgRNA_global_tuned.csv', help='Individual hits')
+    parser.add_argument('-o_dist', '--out_dist', default='Hits_plus_NTC_Distribution_global_tuned.csv', help='Density Plot input')
     
     args = parser.parse_args()
     filter_and_extract_sgrnas(args.input, args.out_hits, args.out_dist)

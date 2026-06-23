@@ -11,7 +11,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score, precision_sc
 
 def main():
     working_dir = "/local/projects-t3/lilab/vmenon/CRISPRi/Re-analysis/Meta_ML/Complete_dataset_sigmoid_score_A549/"
-    df = pd.read_csv(os.path.join(working_dir, "CRISPR_ml_features_final.csv"))
+    df = pd.read_csv(os.path.join(working_dir, "CRISPR_ml_features_final_A549.csv"))
     
     # Target definition
     df['class'] = (df['Sigmoid_Score'] > 0.25).astype(int)

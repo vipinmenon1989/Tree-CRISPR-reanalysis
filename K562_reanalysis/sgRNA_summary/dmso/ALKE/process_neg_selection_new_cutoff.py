@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import sys
 
-def process_mageck_negative_selection(sgrna_file, control_label, n_param=1.0, b_param=2.0, ntc_percentile=0.95):
+def process_mageck_negative_selection(sgrna_file, control_label, n_param=1.1985, b_param=2.8963, ntc_percentile=0.95):
     """
     Processes MAGeCK sgRNA output for Negative Selection using the CRE paper formula:
     S(Z) = 1 / (1 + exp(-n*Z + b))
@@ -69,8 +69,8 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--control", default="NO-TARGET")
     parser.add_argument("-p", "--percentile", type=float, default=0.95)
     # Defaulting to the benchmark parameters derived from the CRE screenshot
-    parser.add_argument("-b", "--b_shift", type=float, default=2.0)
-    parser.add_argument("-n", "--n_slope", type=float, default=1.0)
+    parser.add_argument("-b", "--b_shift", type=float, default=2.8963)
+    parser.add_argument("-n", "--n_slope", type=float, default=1.1985)
     parser.add_argument("-o", "--output", default="Scored_sgRNA_Matrix_new_cutoff.csv")
     parser.add_argument("-g", "--gene_output", default="Negative_Selection_Hits_RuleOf3_new_cutoff.csv")
 

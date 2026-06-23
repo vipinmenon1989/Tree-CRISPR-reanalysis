@@ -56,7 +56,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate density plot for NTC vs. Hits distribution.")
     parser.add_argument("-i", "--input", required=True, help="Path to the K_NTC.csv file")
     parser.add_argument("-c", "--control", default="NO-TARGET", help="Label for NTC in the 'Gene' column")
-    parser.add_argument("-o", "--output", default="K_NTC_Density_Plot.png", help="Path for output PNG")
+    parser.add_argument("-o", "--output", default="ALKE_NTC_Density_Plot_isolated_equation.png", help="Path for output PNG")
 
     args = parser.parse_args()
     plot_ntc_vs_hits_strict(args.input, args.control, args.output)
