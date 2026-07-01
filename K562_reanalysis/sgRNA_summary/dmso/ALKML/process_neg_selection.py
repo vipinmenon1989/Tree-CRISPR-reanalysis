@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import argparse
 
-def process_mageck_negative_selection(sgrna_file, control_label, b_param=1.5, n_param=0.66, ntc_percentile=0.95):
+def process_mageck_negative_selection(sgrna_file, control_label, b_param=2.0, n_param=1.5, ntc_percentile=0.95):
     """
     Processes a standard MAGeCK sgRNA output for a Negative Selection screen.
     Calculates Z-scores against NTCs, applies Sigmoid, calculates a dynamic threshold, 
@@ -86,8 +86,8 @@ if __name__ == "__main__":
     CONTROL_LABEL = "NO-TARGET"  
     
     # Sigmoid & Threshold Parameters
-    B_SHIFT = 1.5  
-    N_SLOPE = 0.66  
+    B_SHIFT = 2.0  
+    N_SLOPE = 1.0  
     NTC_PERCENTILE = 0.95 
     
     # --- EXECUTION ---
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     df_valid_genes = aggregate_rule_of_three(df_targets)
     
     # --- SAVE ---
-    df_full_scored.to_csv("Scored_sgRNA_Matrix.csv", index=False)
+    df_full_scored.to_csv("Scored_sgRNA_Matrix_isolated.csv", index=False)
     df_valid_genes.to_csv("Negative_Selection_Hits_RuleOf3.csv", index=False)
     
     print("\nPipeline Complete. Outputs saved.")
