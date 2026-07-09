@@ -28,8 +28,8 @@ def merge_crispri_on_id(file_a_path, file_b_path, output_path):
 
 # Execution variables
 file_1 = 'TreeCRISPRi_lib_merged_A375_scaled.txt'
-file_2 = 'ALKE_hits_complete.csv'
-output_file = 'ALKE_independent_test_A375_epigenetic_scaled.txt'
+file_2 = 'K_hits_complete_isolated.csv'
+output_file = 'K_A375_epigenetic_scaled.txt'
 
 if __name__ == "__main__":
     merge_crispri_on_id(file_1, file_2, output_file)

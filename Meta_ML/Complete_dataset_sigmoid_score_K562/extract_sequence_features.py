@@ -12,8 +12,8 @@ def shannon_entropy(seq):
 
 def main():
     working_dir = "/local/projects-t3/lilab/vmenon/CRISPRi/Re-analysis/Meta_ML/Complete_dataset_sigmoid_score_K562/"
-    input_file = os.path.join(working_dir, "ALKE_hits_complete_K562_Epigenetic_ID_merged.txt")
-    output_file = os.path.join(working_dir, "CRISPR_ml_features_final.csv")
+    input_file = os.path.join(working_dir, "K_K562_epigenetic_training.txt")
+    output_file = os.path.join(working_dir, "CRISPR_ml_features_final_K_K562.csv")
 
     if not os.path.exists(input_file):
         raise FileNotFoundError(f"Error: {input_file} not found in the target directory.")

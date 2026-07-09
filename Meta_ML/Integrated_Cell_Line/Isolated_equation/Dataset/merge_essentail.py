@@ -3,7 +3,7 @@ import pandas as pd
 # 1. Load both datasets
 # If files are tab-separated, add sep='\t' inside read_csv()
 file1 = pd.read_csv("TreeCRISPRi_ESG_list.txt",sep='\t')
-file2 = pd.read_csv("Unified_GenomeWide_3CellLine_Matrix.txt",sep='\t')
+file2 = pd.read_csv("Unified_GenomeWide_3Cellline_meta.txt",sep='\t')
 
 # 2. Extract all unique genes from file1's 'gene' column to create a clean reference array
 target_genes = file1["gene"].dropna().unique()
@@ -13,7 +13,7 @@ target_genes = file1["gene"].dropna().unique()
 matched_dataset = file2[file2["gene"].isin(target_genes)]
 
 # 4. Export the exact filtered dataset to a new CSV file
-matched_dataset.to_csv("Unified_target_genes_data.txt",sep="\t",index=False)
+matched_dataset.to_csv("Unified_target_genes_metadata.txt",sep="\t",index=False)
 
 # Validation output
 print(f"Filtering complete.")

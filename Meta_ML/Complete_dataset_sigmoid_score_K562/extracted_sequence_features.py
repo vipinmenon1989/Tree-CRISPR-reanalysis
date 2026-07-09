@@ -1,23 +1,34 @@
+import os
+import sys
 import pandas as pd
 import numpy as np
 import RNA
 from Bio.SeqUtils import MeltingTemp as mt
 from scipy.stats import entropy
-import os
 
 def shannon_entropy(seq):
     counts = [seq.count(base) for base in ['A', 'T', 'G', 'C']]
     return round(entropy(counts, base=2), 1)
 
 def main():
-    input_file = "K_A375_epigenetic_scaled.txt"
-    output_file = "CRISPR_ml_features_final_A375.csv"
+    input_file = "K_K562_epigenetic_training.txt"
+    output_file = "CRISPR_ml_features_final_K562.csv"
     
     # Load input dataset
     if not os.path.exists(input_file):
         raise FileNotFoundError(f"Error: {input_file} not found in the current working directory.")
         
-    df = pd.read_csv(input_file,sep='\t')
+    df = pd.read_csv(input_file, sep='\t')
+    
+    # Check for raw score existence before target binarization
+    if 'Sigmoid_Score' not in df.columns:
+        raise KeyError("Error: 'Sigmoid_Score' column is missing from the input file.")
+
+    # ==================================================================
+    # TARGET CLASS GENERATION LAYER
+    # ==================================================================
+    # Binarizes your isolated threshold: > 0.25 maps to 1, <= 0.25 maps to 0
+    df['class'] = (df['Sigmoid_Score'] > 0.25).astype(int)
     
     # 1. Thermodynamics & Entropy (sgRNA Sequence - 20bp)
     sgrna_col = 'sgRNA Sequence'
@@ -66,15 +77,18 @@ def main():
         di_cols = [f'di{i+1}_{dibase}' for i in range(29)]
         df[f'count_{dibase}'] = pos_df[di_cols].sum(axis=1)
         
-    # 3. Data Merging and Output Formatting (CRITICAL)
-    # Kept original columns
-    keep_cols = ['ID', 'Sigmoid_score', 'distance_to_TSS', 'class','Gene','sgRNA Sequence']
+    # ==================================================================
+    # 3. DATA MERGING AND OUTPUT FORMATTING (CRITICAL)
+    # ==================================================================
+    # Structural metadata tracker list
+    keep_cols = ['ID', 'sgRNA Sequence', 'Sigmoid_Score', 'Gene', 'distance_to_TSS', 'class']
+    
     # Filter only those that are present in df
     keep_existing = [c for c in keep_cols if c in df.columns]
     # Keep all columns containing '_bin_'
     bin_cols = [c for c in df.columns if '_bin_' in c]
     
-    orig_kept_df = df[keep_existing + bin_cols]
+    orig_kept_df = df[keep_existing + bin_cols].copy()
     
     # Kept newly generated sequence / thermo features
     new_features = [
@@ -89,6 +103,7 @@ def main():
     
     # Save output to CSV
     final_df.to_csv(output_file, index=False)
+    print(f"[-->] Completed. Final feature matrix containing target 'class' saved to: {output_file}")
 
 if __name__ == "__main__":
     main()
