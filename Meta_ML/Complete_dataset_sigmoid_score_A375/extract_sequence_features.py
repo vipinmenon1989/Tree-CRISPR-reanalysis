@@ -10,8 +10,8 @@ def shannon_entropy(seq):
     return round(entropy(counts, base=2), 1)
 
 def main():
-    input_file = "K_A375_epigenetic_scaled.txt"
-    output_file = "CRISPR_ml_features_final_A375.csv"
+    input_file = "ALKE_hits_complete_A549_Epigenetic_ID_merged.txt"
+    output_file = "CRISPR_ml_features_final.csv"
     
     # Load input dataset
     if not os.path.exists(input_file):
@@ -68,7 +68,7 @@ def main():
         
     # 3. Data Merging and Output Formatting (CRITICAL)
     # Kept original columns
-    keep_cols = ['ID', 'Sigmoid_score', 'distance_to_TSS', 'class','Gene','sgRNA Sequence']
+    keep_cols = ['ID', 'Sigmoid_Score', 'distance_to_TSS', 'is_K562']
     # Filter only those that are present in df
     keep_existing = [c for c in keep_cols if c in df.columns]
     # Keep all columns containing '_bin_'
