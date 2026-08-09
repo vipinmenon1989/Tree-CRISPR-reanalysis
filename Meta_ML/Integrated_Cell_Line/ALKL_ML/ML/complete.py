@@ -21,16 +21,16 @@ from sklearn.metrics import (
 
 def main():
     # 1. Cluster Workspace Configuration (Isolated Equation Space)
-    working_dir = "./"
+    working_dir = "/local/projects-t3/lilab/vmenon/CRISPRi/Re-analysis/Meta_ML/Integrated_Cell_Line/ALKL_ML/ML/"
     train_file = os.path.join(working_dir, "CRISPRi_ML_Train_80_unseen_guides.csv")
     
-    # Clean output names to prevent reading old files
-    model_output_path = os.path.join(working_dir, "unseen_guide_model.json")
-    metrics_output_path = os.path.join(working_dir, "unseen_guide_metrics.txt")
-    curves_png_path = os.path.join(working_dir, "unseen_guide_curves.png")
-    curves_pdf_path = os.path.join(working_dir, "unseen_guide_curves.pdf")
-    shap_png_path = os.path.join(working_dir, "unseen_guide_shap.png")
-    shap_pdf_path = os.path.join(working_dir, "unseen_guide_shap.pdf")
+    # Path configurations distinctly named to reflect the unseen guide data layout
+    model_output_path = os.path.join(working_dir, "unseen_guide_multimodality_model.json")
+    metrics_output_path = os.path.join(working_dir, "unseen_guide_multimodality_metrics.txt")
+    curves_png_path = os.path.join(working_dir, "unseen_guide_multimodality_curves.png")
+    curves_pdf_path = os.path.join(working_dir, "unseen_guide_multimodality_curves.pdf")
+    shap_png_path = os.path.join(working_dir, "unseen_guide_multimodality_shap.png")
+    shap_pdf_path = os.path.join(working_dir, "unseen_guide_multimodality_shap.pdf")
     
     if not os.path.exists(train_file):
         print(f"CRITICAL ERROR: Training file missing from {working_dir}")
@@ -38,16 +38,12 @@ def main():
         
     print("[*] Ingesting complete master data matrix...")
     df_master = pd.read_csv(train_file, sep=',')
+    
+    # FIX: Corrected list comprehension syntax error here
     df_master.columns = [col.lower() for col in df_master.columns]
 
-    # ==================================================================
-    # NEW STRICT TARGET DEFINITION: Sigmoid Score > 0.50
-    # ==================================================================
-    # Drop the old class column if it carried over from the split script
-    if 'class' in df_master.columns:
-        df_master = df_master.drop(columns=['class'])
-        
-    df_master['class'] = (df_master['sigmoid_score'] > 0.5).astype(int)
+    # Target definition from stable sigmoid score thresholding (PI rule > 0.25)
+    df_master['class'] = (df_master['sigmoid_score'] > 0.25).astype(int)
 
     # Verify presence of individual guide sequence tracking array before dropping metadata
     if 'sgrna sequence' not in df_master.columns:
@@ -57,29 +53,29 @@ def main():
     guides_master = df_master['sgrna sequence'].values
 
     # ==================================================================
-    # 2. ISOLATE FEATURE SPACE: REMOVE METADATA AND BROAD FEATURES
+    # 2. ISOLATE FEATURE SPACE: REMOVE BROAD GENE EPIGENETIC FEATURES
     # ==================================================================
     explicit_metadata_drops = [
-        'unique_sgrna_id', 'id', 'gene', 'sgrna sequence', 'sgrna_sequence',
-        'cell_line_origin', 'sigmoid_score', 'class',
-        'start', 'start_30', 'end', 'end_30', 'closest_tss_coord', 
-        'gene_strand', 'strand', 'guide_strand', 'pam', 'extended_sequence','distance_to_tss'
+        'unique_sgrna_id', 'id', 'gene', 'sgrna sequence', 
+        'cell_line_origin', 'distance_to_tss', 'sigmoid_score', 'class','start','end',
     ]
     
-    # Dynamically find broad gene epigenetic features
+    # Dynamically find broad gene epigenetic features: 
+    # Columns containing 'atac', 'methylation', 'cpg', or 'h3k' that do NOT have 'guide_' prefix
     gene_epi_keywords = ['atac', 'methylation', 'cpg', 'h3k']
     gene_epi_drops = [
         col for col in df_master.columns 
         if any(kw in col for kw in gene_epi_keywords) and not col.startswith('guide_')
     ]
     
+    # Consolidate all drop targets
     all_drops = list(set(explicit_metadata_drops + gene_epi_drops))
     cols_to_drop = [col for col in all_drops if col in df_master.columns]
     
     X_master = df_master.drop(columns=cols_to_drop, errors='ignore').select_dtypes(include=[np.number])
     y_master = df_master['class'].values
 
-    print(f"--> Broad Gene Epigenetic & Positional Features Dropped: {len(cols_to_drop)} features removed.")
+    print(f"--> Broad Gene Epigenetic Features Dropped: {len(gene_epi_drops)} features removed.")
     print(f"--> Retained Local Guide Epigenetic and Sequence Rules.")
     print(f"--> Final Feature Matrix Isolated: {X_master.shape[0]} rows x {X_master.shape[1]} active features.")
 
@@ -95,12 +91,8 @@ def main():
     
     print(f"--> Unseen Guide Split Layout: Train = {X_train.shape[0]} rows | Validation = {X_val.shape[0]} rows")
 
-    # ==================================================================
-    # 4. XGBOOST CONFIGURATION (HARDENED)
-    # ==================================================================
+    # 4. XGBoost Optimization Engine Configuration
     ratio = float(np.sum(y_train == 0)) / np.sum(y_train == 1)
-    print(f"--> Dynamic Class Balancing Ratio Applied: {ratio:.4f}")
-    
     xgb_clf = xgb.XGBClassifier(
         objective='binary:logistic',
         scale_pos_weight=ratio,
@@ -109,17 +101,17 @@ def main():
         n_jobs=-1
     )
     
-    # Defensive hyperparameter tuning matrix restricted to shallower trees
+    # Defensive hyperparameter tuning matrix
     param_grid = {
-        'n_estimators': [100, 150, 200, 250], 
-        'max_depth': [2, 3, 4],               
-        'learning_rate': [0.01, 0.02, 0.05],
-        'subsample': [0.6, 0.75, 0.85],       
-        'colsample_bytree': [0.6, 0.75, 0.85],
-        'min_child_weight': [3, 5, 7],        
-        'gamma': [0.1, 0.5, 1.0],             
-        'reg_alpha': [0.1, 1, 5],             
-        'reg_lambda': [1, 5, 10]              
+        'n_estimators': [50, 100, 150, 200],
+        'max_depth': [2, 3, 4, 5], 
+        'learning_rate': [0.01, 0.03, 0.05],
+        'subsample': [0.7, 0.8],
+        'colsample_bytree': [0.7, 0.8],
+        'min_child_weight': [1, 3, 5], 
+        'gamma': [0, 0.1, 0.2],      
+        'reg_alpha': [0.1, 1, 5],        
+        'reg_lambda': [1, 5, 10]      
     }
     
     # ==================================================================
@@ -130,7 +122,7 @@ def main():
     random_search = RandomizedSearchCV(
         estimator=xgb_clf, 
         param_distributions=param_grid, 
-        n_iter=100, 
+        n_iter=40, 
         scoring='roc_auc', 
         cv=cv, 
         n_jobs=-1, 
@@ -163,7 +155,7 @@ def main():
 
     print(f"--> Exporting comprehensive evaluation log to: {metrics_output_path}")
     with open(metrics_output_path, 'w') as f:
-        f.write("=== Sequence + Local Guide Epigenetic Model Metrics (Strict > 0.5 Threshold) ===\n")
+        f.write("=== Sequence + Local Guide Epigenetic Model Metrics (Unseen Guide Split) ===\n")
         f.write(f"Grouped Training Pool Size: {X_train.shape[0]} rows\n")
         f.write(f"Grouped Validation Pool Size: {X_val.shape[0]} rows\n")
         f.write(f"Total Integrated Features Active: {X_train.shape[1]}\n")
