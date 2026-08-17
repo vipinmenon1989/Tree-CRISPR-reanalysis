@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import argparse
 
-def process_mageck_negative_selection(sgrna_file, control_label, b_param=2.0, n_param=1.5, ntc_percentile=0.95):
+def process_mageck_negative_selection(sgrna_file, control_label, b_param=2.0, n_param=1.0, ntc_percentile=0.95):
     """
     Processes a standard MAGeCK sgRNA output for a Negative Selection screen.
     Calculates Z-scores against NTCs, applies Sigmoid, calculates a dynamic threshold, 
